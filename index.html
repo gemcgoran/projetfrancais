@@ -58,11 +58,25 @@ hr.separateur { border: 0; border-top: 1px solid var(--bordure); max-width: 1100
 .placeholder { color: var(--texte-doux); font-style: italic; }
 footer { text-align: center; padding: 60px 20px; color: var(--texte-doux); font-family: sans-serif; font-size: 14px; border-top: 1px solid var(--bordure); }
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ===== 6. CARTE ===== */
+.filtres { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+.filtre, .action { background: var(--fond-clair); color: var(--texte); border: 1px solid var(--bordure); padding: 10px 16px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+.filtre:hover, .action:hover { border-color: var(--accent); }
+.filtre.inactif { opacity: 0.4; }
+.pastille { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+#carte { height: 540px; margin-top: 20px; border: 1px solid var(--bordure); background: #111; }
+.note { font-size: 14px; color: var(--texte-doux); font-family: sans-serif; }
+.leaflet-popup-content { font-family: sans-serif; font-size: 14px; line-height: 1.5; color: #222; }
+</style>
   </head>
   <body>
   <div id="progression"></div>
   <nav>
   <a href="#introduction">Introduction</a>
+<a href="#carte-section">Carte</a>
   <a href="#recherche">Recherche</a>
   <a href="#preconceptions">Préconceptions</a>
   <a href="#realite">La réalité</a>
@@ -82,6 +96,22 @@ footer { text-align: center; padding: 60px 20px; color: var(--texte-doux); font-
   <h2>Introduction</h2>
   <p class="placeholder">[Hello Minoo!!!] Présentez ici le sujet : que s'est-il passé en octobre 2026 ? Pourquoi ce sujet est-il important ? Quelle est votre question de départ (problématique) ?</p>
   <p class="placeholder">[À remplacer] Expliquez en quelques phrases votre démarche : recherches, interviews à Paris, comparaison entre vos idées de départ et ce que vous avez découvert.</p>
+</section>
+<hr class="separateur">
+<!-- ===== CARTE INTERACTIVE ===== -->
+<section id="carte-section" class="reveal">
+<span class="numero">Carte interactive</span>
+<h2>Carte des manifestations et de nos interviews</h2>
+<p class="placeholder">[À remplacer] Expliquez ce que montre la carte : où ont eu lieu les manifestations et les incidents, et où nous avons mené nos interviews. Cliquez sur un point pour lire les détails. Utilisez les boutons + / − pour zoomer.</p>
+<div class="filtres">
+<button class="filtre" data-type="manif"><span class="pastille" style="background:#c8553d"></span>Manifestations / violences policières</button>
+<button class="filtre" data-type="citoyen"><span class="pastille" style="background:#4a90d9"></span>Interviews citoyens</button>
+<button class="filtre" data-type="police"><span class="pastille" style="background:#e0a030"></span>Interviews police</button>
+<button class="action" id="zoom-paris">Zoom sur Paris</button>
+<button class="action" id="zoom-france">Vue de la France</button>
+</div>
+<div id="carte"></div>
+<p class="note">Les emplacements des personnes interviewées sont volontairement approximatifs (quartier) pour protéger leur vie privée. Sources des événements : [à compléter].</p>
 </section>
 <hr class="separateur">
   <!-- ===== 2. BACKGROUND DE RECHERCHE ===== -->
@@ -213,7 +243,45 @@ document.getElementById(bouton.dataset.cible).classList.add('actif');
 });
   });
 });
-</script>
+// 6. CARTE : les points sont définis dans la liste "lieux" ci-dessous.
+  // Pour ajouter un point, copie une ligne et change type, nom, date, lat, lng et texte.
+  // type : 'manif' (rouge), 'citoyen' (bleu) ou 'police' (orange)
+  // lat / lng : coordonnées GPS (clic droit sur Google Maps > copier les coordonnées)
+  // IMPORTANT : pour les personnes interviewées, mets un lieu approximatif (quartier), jamais une adresse précise.
+  const lieux = [
+    { type: 'manif', nom: 'EXEMPLE – Place de la République, Paris', date: '[date à compléter]', lat: 48.8675, lng: 2.3636, texte: 'Point d\'exemple : remplace par une vraie manifestation et cite ta source.' },
+    { type: 'manif', nom: 'EXEMPLE – Place de la Nation, Paris', date: '[date à compléter]', lat: 48.8483, lng: 2.3959, texte: 'Point d\'exemple : remplace par une vraie manifestation et cite ta source.' },
+    { type: 'manif', nom: 'EXEMPLE – Lyon', date: '[date à compléter]', lat: 45.7640, lng: 4.8357, texte: 'Point d\'exemple : remplace par une vraie manifestation et cite ta source.' },
+    { type: 'manif', nom: 'EXEMPLE – Marseille', date: '[date à compléter]', lat: 43.2965, lng: 5.3698, texte: 'Point d\'exemple : remplace par une vraie manifestation et cite ta source.' },
+    { type: 'citoyen', nom: 'EXEMPLE – Citoyen 1 (Paris, environ 11e)', date: '[date de l\'interview]', lat: 48.8590, lng: 2.3800, texte: 'Point d\'exemple : résumé de l\'interview.' },
+    { type: 'citoyen', nom: 'EXEMPLE – Citoyen 2 (Paris, environ 18e)', date: '[date de l\'interview]', lat: 48.8920, lng: 2.3480, texte: 'Point d\'exemple : résumé de l\'interview.' },
+    { type: 'police', nom: 'EXEMPLE – Policier 1 (Paris)', date: '[date de l\'interview]', lat: 48.8566, lng: 2.3470, texte: 'Point d\'exemple : résumé de l\'interview.' }
+    ];
+  const couleurs = { manif: '#c8553d', citoyen: '#4a90d9', police: '#e0a030' };
+  const carte = L.map('carte', { scrollWheelZoom: false }).setView([46.6, 2.5], 6);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors © CARTO',
+    maxZoom: 18
+  }).addTo(carte);
+  const couches = { manif: L.layerGroup().addTo(carte), citoyen: L.layerGroup().addTo(carte), police: L.layerGroup().addTo(carte) };
+  lieux.forEach(l => {
+    const point = L.circleMarker([l.lat, l.lng], { radius: 9, color: '#fff', weight: 1.5, fillColor: couleurs[l.type], fillOpacity: 0.9 });
+    point.bindPopup('<strong>' + l.nom + '</strong><br><em>' + l.date + '</em><br>' + l.texte);
+    point.addTo(couches[l.type]);
+  });
+  // Boutons de filtre : afficher / cacher chaque type de point
+  document.querySelectorAll('.filtre').forEach(bouton => {
+    bouton.addEventListener('click', () => {
+      const t = bouton.dataset.type;
+      const visible = carte.hasLayer(couches[t]);
+      if (visible) { carte.removeLayer(couches[t]); } else { carte.addLayer(couches[t]); }
+      bouton.classList.toggle('inactif', visible);
+    });
+  });
+  document.getElementById('zoom-paris').addEventListener('click', () => carte.setView([48.8566, 2.3522], 12));
+  document.getElementById('zoom-france').addEventListener('click', () => carte.setView([46.6, 2.5], 6));
+  setTimeout(() => carte.invalidateSize(), 500);
+  </script>
   </body>
   </html>
   
